@@ -31,7 +31,10 @@ docker-compose up -d proton-local
 ```{bash}
 docker-compose up init_atomic_contracts
 ```
-***Known issue: proton-node might not start properly due to timeout creating atomic assets contracts - in this case, initializing contracts will fail - a message will indicate this - remove the running node and start again.***
+***Known issue: proton-node might not start properly due to timeout creating atomic assets contracts - in this case, initializing contracts will fail - the following message will indicate this - remove the running node and start again:***
+```{bash}
+AtomicAssets contract not available not properly deployed, please reset node
+``` 
 
 ## Start pink-api
 ```{bash}
