@@ -7,7 +7,7 @@ const fetch = require('node-fetch')
 const ENDPOINT = process.env.ENDPOINT
 const CREATOR = 'atomicassets'
 const CREATOR_PERMISSION = 'active'
-const COLLECTION_NAME = 'soonmarket11' // COLLECTION_NAME must be 12 chars
+const COLLECTION_NAME = 'soonmarket23' // COLLECTION_NAME must be 12 chars
 const SCHEMA_NAME = 'monsters'
 const CREATOR_FEE = 0.01
 const SCHEMA = {
@@ -41,11 +41,14 @@ const transact = async (actions) => {
     try {
         return await api.transact({ actions }, {
             useLastIrreversible: true,
-            expireSeconds: 300
+            expireSeconds: 30
         })
     } catch (e) {
         console.log("Error executing transaction " + e);
-        process.exit(-1);
+        if (e.message.includes('fetching abi for atomicassets: Read past end of buffer')) {
+            console.log("AtomicAssets contract not available, aborting")
+            process.exit(-1);
+        }
     }
 }
 
@@ -82,7 +85,7 @@ const mintAssets = async () => {
                         "tokens_to_back": []
                     }
                 }
-            ]).then(res => console.log(res))
+            ])
         }
     }
 }
@@ -151,9 +154,10 @@ const createCollection = async () => {
             "authorized_accounts": [CREATOR],
             "notify_accounts": [],
             "market_fee": CREATOR_FEE,
+            "name": "monsters",
             "data": []
         }
-    }]);
+    }]).then(r => console.log(r));
 }
 
 const createSchema = async () => {
@@ -180,13 +184,6 @@ const createSchema = async () => {
 }
 
 const createTemplates = async () => {
-
-    let x = Object.entries(SCHEMA).map(([key, type]) => ({
-        key: key,
-        value: [type, templates[0][key]]
-    }));
-
-    console.log(x);
 
     for (const template of templates) {
         console.log("----------------------------- Creating template for " + template.name + " -----------------------------------")
@@ -271,18 +268,22 @@ const get_atomicassets_tables = async () => {
     console.log(await get_atomicassets_table(CREATOR, 'assets'));
 }
 
+const init_contracts = async () => {
+    console.log((await initAtomicContract('atomicassets')));
+    console.log((await initAtomicContract('atomicmarket')));
+}
+
 const create_and_mint = async () => {
-    console.log((await initAtomicContract('atomicassets')).processed);
-    console.log((await initAtomicContract('atomicmarket')).processed);
-    console.log((await createCollection()).processed);
-    console.log((await createSchema()).processed);
+    console.log((await createCollection()));
+    console.log((await createSchema()));
     await createTemplates();
     await mintAssets();
 }
 
-const main = async () => {
-    await create_and_mint();
-    await get_atomicassets_tables();
+const main = () => {
+    init_contracts();
+    // create_and_mint();
+    // get_atomicassets_tables();
 }
 
 main()

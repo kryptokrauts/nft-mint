@@ -1,0 +1,82 @@
+version: '3.0'
+services:
+  proton-local:
+    container_name: proton-local-node
+    image: proton-local
+    command: ./start.sh
+    restart: on-failure
+    ports:
+      - "8888:8888"
+    networks:
+      - proton-local
+  init_atomic_contracts:
+    container_name: init_atomic_contracts
+    build: .
+    command: node init_atomic_contracts.js
+    depends_on:
+      - proton-local
+    networks:
+      - proton-local
+  # proton-monsters:
+  #   container_name: proton-monsters
+  #   build: ./proton-monsters/
+  #   command: node proton-monsters.js
+  #   depends_on:
+  #     - proton-local
+  #   networks:
+  #     - proton-local
+  local-api-filler:
+    container_name: local-api-filler
+    image: eosio-contract-api_eosio-contract-api-filler
+    command: yarn run start:filler
+    restart: on-failure
+    depends_on:
+      - local-api-postgres
+      - local-api-redis
+      - proton-local
+    volumes:
+      - ./config:/home/application/app/config
+    networks:
+      - proton-local
+  local-api-server:
+    container_name: local-api-server
+    image: eosio-contract-api_eosio-contract-api-server
+    command: yarn run start:server
+    restart: on-failure
+    ports:
+      - "9000:9000"
+    depends_on:
+      - local-api-postgres
+      - proton-local
+    volumes:
+      - ./config:/home/application/app/config
+    networks:
+      - proton-local
+  local-api-redis:
+    container_name: local-redis
+    image: redis:5-alpine
+    restart: on-failure
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./docker/redis/data:/data
+    networks:
+      - proton-local
+  local-api-postgres:
+    container_name: local-postgres
+    image: postgres:13.4
+    restart: on-failure
+    shm_size: '8gb'
+    environment:
+      POSTGRES_USER: local-api
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: local-api
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker/postgres/data:/var/lib/postgresql/data
+    networks:
+      - proton-local
+networks:
+  proton-local:
+    driver: bridge

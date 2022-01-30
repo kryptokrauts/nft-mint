@@ -1,0 +1,19 @@
+{
+  "postgres": {
+    "host": "local-api-postgres",
+    "port": 5432,
+    "user": "local-api",
+    "password": "changeme",
+    "database": "local-api"
+  },
+  "redis": {
+    "host": "local-api-redis",
+    "port": 6379
+  },
+  "chain": {
+    "name": "proton-local",
+    "chain_id": "981453d176ddca32aa278ff7b8af9bf4632de00ab49db273db03115705d90c5a",
+    "http": "http://proton-local:8888",
+    "ship": "http://proton-local:8080"
+  }
+}

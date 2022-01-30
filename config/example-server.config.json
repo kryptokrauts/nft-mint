@@ -1,0 +1,56 @@
+{
+  "provider_name": "pink.gg",
+  "provider_url": "https://pink.gg",
+
+  "server_addr": "0.0.0.0",
+  "server_name": "wax.api.atomicassets.io",
+  "server_port": 9000,
+
+  "cache_life": 2,
+  "trust_proxy": true,
+
+  "rate_limit": {
+    "interval": 60,
+    "requests": 240
+  },
+
+  "ip_whitelist": [],
+  "slow_query_threshold": 7500,
+
+  "max_query_time_ms": 10000,
+  "max_db_connections": 50,
+
+  "namespaces": [
+    {
+      "name": "atomicassets",
+      "path": "/atomicassets",
+      "args": {
+        "atomicassets_account": "atomicassets",
+        "connected_reader": "atomic-1",
+        "socket_features": {
+          "asset_update": false
+        }
+      }
+    },
+    {
+      "name": "atomicmarket",
+      "path": "/atomicmarket",
+      "args": {
+        "atomicmarket_account": "atomicmarket",
+        "connected_reader": "atomic-1",
+        "socket_features": {
+          "asset_update": false
+        }
+      }
+    },
+    {
+      "name": "atomictools",
+      "path": "/atomictools",
+      "args": {
+        "atomictools_account": "atomictoolsx",
+        "atomicassets_account": "atomicassets",
+        "connected_reader": "atomic-1"
+      }
+    }
+  ]
+}
