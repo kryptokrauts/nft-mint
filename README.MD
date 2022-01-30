@@ -1,4 +1,4 @@
-# soon.market local setup
+# Local setup
 In order to run the project locally, a local proton node together with deployed atomic contracts is needed. 
 
 # Prerequisites
