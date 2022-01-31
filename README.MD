@@ -64,6 +64,20 @@ Public Key Prefix: EOS
 Default Token Symbol: XPR
 ```
 
+# Setup local soon.market
+
+Following entries in .env need to be set
+
+```{bash}
+# chain endpoints
+NEXT_PUBLIC_CHAIN_ENDPOINTS='http://localhost:8888'
+# pink api endpoint
+NEXT_PUBLIC_NFT_MARKET_WEB_API='http://localhost:9000'
+# soon.market name
+NEXT_PUBLIC_MARKETPLACE='soonmarket11'
+# local
+NEXT_PUBLIC_CHAIN_ID = '981453d176ddca32aa278ff7b8af9bf4632de00ab49db273db03115705d90c5a'
+```
 
 # Code used for minting Monsters from scratch
 
