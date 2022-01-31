@@ -17,14 +17,22 @@ services:
       - proton-local
     networks:
       - proton-local
-  # proton-monsters:
-  #   container_name: proton-monsters
-  #   build: ./proton-monsters/
-  #   command: node proton-monsters.js
-  #   depends_on:
-  #     - proton-local
-  #   networks:
-  #     - proton-local
+  mint_spots:
+    container_name: mint_spots
+    build: .
+    command: node soon_spots.js
+    depends_on:
+      - proton-local
+    networks:
+      - proton-local
+  mint_proton_monsters:
+    container_name: mint_proton_monsters
+    build: .
+    command: node proton_monsters.js
+    depends_on:
+      - proton-local
+    networks:
+      - proton-local
   local-api-filler:
     container_name: local-api-filler
     image: eosio-contract-api_eosio-contract-api-filler

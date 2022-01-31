@@ -12,5 +12,6 @@ COPY .env .
 COPY package.json .
 COPY init_atomic_contracts.js .
 COPY proton_monsters.js .
+COPY soon_spots.js .
 
 RUN npm install

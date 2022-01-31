@@ -41,6 +41,29 @@ AtomicAssets contract not available not properly deployed, please reset node
 docker-compose up -d local-api-filler
 docker-compose up -d local-api-server
 ```
+***Hint: server might need a restart due to incomplete start when filler not initialized***
+
+## Mint NFTs
+```{bash}
+docker-compose up mint_proton_monsters
+docker-compose up mint_spots
+```
+***mint_spots will register a market and thus enable auctioning***
+
+# Cleanup
+In case you need a fresh local node remove all containers and clean /mint_nft/docker folder
+
+# Setup anchor wallet for local signing
+Download [Anchor Wallet Desktop](https://greymass.com/en/anchor/)
+Goto Manage Blockchains -> Add/Remove -> +Custom Blockchain
+```
+ChainId: 981453d176ddca32aa278ff7b8af9bf4632de00ab49db273db03115705d90c5a
+Name of Blockchain: Proton-Local
+Default node for this blockchain: http://localhost:8888
+Public Key Prefix: EOS
+Default Token Symbol: XPR
+```
+
 
 # Code used for minting Monsters from scratch
 

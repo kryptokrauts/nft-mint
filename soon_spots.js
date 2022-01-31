@@ -4,18 +4,24 @@ const { JsonRpc, Api, JsSignatureProvider } = require('@proton/js')
 const fetch = require('node-fetch')
 
 // Constants
+const atomicassets_contract = "atomicassets"
+const atomicmarket_contract = "atomicmarket"
+
 const ENDPOINT = process.env.ENDPOINT
 const CREATOR = 'powerofsoon'
 const CREATOR_PERMISSION = 'active'
-const SCHEMA_NAME = 'soonmarket'
+const SCHEMA_NAME = 'baseschema'
 const CREATOR_FEE = 0.01
+// soon market spots collection name
+const SMS_COL = "soonmarketsp";
+// name of the marketplace
+const MARKETPLACE_NAME = "soonmarket11";
 const SCHEMA = {
     series: "uint16",
     image: "string",
     name: "string",
     desc: "string"
 }
-const SM_COL = "323154322551";
 
 // RPC
 const rpc = new JsonRpc(ENDPOINT, { fetch })
@@ -39,9 +45,10 @@ const transact = async (actions) => {
     }
 }
 
-const createSMCollection = async () => {
+const createSMSCollection = async () => {
+    console.log("----------------------------- Creating Soon Market Spots collection -----------------------------------")
     await transact([{
-        account: 'atomicassets',
+        account: atomicassets_contract,
         name: 'createcol',
         authorization: [{
             actor: CREATOR,
@@ -50,22 +57,22 @@ const createSMCollection = async () => {
         data:
         {
             "author": CREATOR,
-            "collection_name": SM_COL,
+            "collection_name": SMS_COL,
             "allow_notify": true,
             "authorized_accounts": [CREATOR],
             "notify_accounts": [],
             "market_fee": CREATOR_FEE,
-            "name": "soon.market",
+            "name": "soon.spots",
             "data": []
         }
-    }]).then(r => console.log(r));
+    }])
 }
-
-const createSMSchema = async () => {
-    console.log("--------------- Creating soon.market Schema ---------------------");
-    await transact([
+// create monsters schema
+const createSMSSchema = async () => {
+    console.log("--------------- Creating Soon Market Spots Schema ---------------------");
+    return await transact([
         {
-            account: "atomicassets",
+            account: atomicassets_contract,
             name: "createschema",
             authorization: [{
                 actor: CREATOR,
@@ -73,7 +80,7 @@ const createSMSchema = async () => {
             }],
             "data": {
                 "authorized_creator": CREATOR,
-                "collection_name": SM_COL,
+                "collection_name": SMS_COL,
                 "schema_name": SCHEMA_NAME,
                 "schema_format": Object.entries(SCHEMA).map(([key, type]) => ({
                     name: key,
@@ -81,19 +88,16 @@ const createSMSchema = async () => {
                 }))
             }
         }
-    ]).then(r => console.log(r));
+    ])
 }
 
-const createSMTemplate = async () => {
+const createSMSTemplate = async (image, supply, template, desc) => {
+    console.log("----------------------------- Creating " + template + " template  -----------------------------------")
     await transact([
         {
-            account: "atomicassets",
+            account: atomicassets_contract,
             name: "createtempl",
             authorization: [
-                {
-                    actor: "atomicassets",
-                    permission: CREATOR_PERMISSION
-                },
                 {
                     actor: CREATOR,
                     permission: CREATOR_PERMISSION
@@ -101,36 +105,35 @@ const createSMTemplate = async () => {
             ],
             "data": {
                 "authorized_creator": CREATOR,
-                "collection_name": SM_COL,
+                "collection_name": SMS_COL,
                 "schema_name": SCHEMA_NAME,
                 "transferable": true,
                 "burnable": true,
-                "max_supply": 1,
+                "max_supply": supply,
                 "issued_supply": 0,
-                "immutable_data": [{ "key": "image", "value": ["string", "QmW85MY69oC1yWoLTivtGULySyNEAaC5kEaRtDZTuzN8YH"] }, { "key": "name", "value": ["string", "gold"] }, { "key": "desc", "value": ["string", "the one and only golden spot"] }]
+                "immutable_data": [{ "key": "image", "value": ["string", image] }, { "key": "name", "value": ["string", template] }, { "key": "desc", "value": ["string", desc] }]
+
             }
         }
-    ]).then(r => console.log(r));
+    ])
 }
 
-const mintGold = async () => {
+const mint = async (template_id, name, cnt, max) => {
+    console.log("----------------------------- Minting Soon Spot " + name + " (" + cnt + " of " + max + ") -----------------------------------")
     await transact([
         {
-            "account": "atomicassets",
+            "account": atomicassets_contract,
             "name": "mintasset",
-            "authorization": [{
-                actor: "atomicassets",
-                permission: CREATOR_PERMISSION
-            },
-            {
-                actor: CREATOR,
-                permission: CREATOR_PERMISSION
-            }],
+            "authorization": [
+                {
+                    actor: CREATOR,
+                    permission: CREATOR_PERMISSION
+                }],
             "data": {
                 "authorized_minter": CREATOR,
-                "collection_name": SM_COL,
+                "collection_name": SMS_COL,
                 "schema_name": SCHEMA_NAME,
-                "template_id": 1,
+                "template_id": template_id,
                 "new_asset_owner": CREATOR,
                 "immutable_data": [],
                 "mutable_data": [],
@@ -140,12 +143,11 @@ const mintGold = async () => {
     ])
 }
 
-const MARKETPLACE_NAME = "soonmarket11";
-
 const create_market = async () => {
+    console.log("----------------------------- Registering soon market  -----------------------------------")
     await transact([
         {
-            account: "atomicmarket",
+            account: atomicmarket_contract,
             name: "regmarket",
             authorization: [{
                 "actor": CREATOR,
@@ -156,17 +158,18 @@ const create_market = async () => {
                 creator: CREATOR,
                 marketplace_name: MARKETPLACE_NAME
             }
-        }]).then(r => console.log(r));
+        }])
 }
 
 /** Register XPR token for atomicmarket */
 const add_xpr_to_marketconf = async () => {
+    console.log("----------------------------- Adding XPR to soonmarket configuration -----------------------------------")
     await transact([
         {
-            account: "atomicmarket",
+            account: atomicmarket_contract,
             name: "addconftoken",
             authorization: [{
-                "actor": "atomicmarket",
+                "actor": atomicmarket_contract,
                 "permission": CREATOR_PERMISSION,
             }],
             data:
@@ -174,126 +177,135 @@ const add_xpr_to_marketconf = async () => {
                 token_contract: "eosio.token",
                 token_symbol: "4,XPR"
             }
-        }]).then(r => console.log(r));
+        }])
 }
 
 /**transfer nft to another account*/
-const transfer = async () => {
+const transfer = async (id, from, to, memo) => {
+    console.log("----------------------------- Transfer asset with id " + id + " from " + from + " to " + to + " with memo " + memo + " -----------------------------------")
     await transact([
         {
-            account: "atomicassets",
+            account: atomicassets_contract,
             name: "transfer",
-            "authorization": [{
-                actor: "atomicassets",
-                permission: CREATOR_PERMISSION
-            },
-            {
-                actor: CREATOR,
-                permission: CREATOR_PERMISSION
-            }],
-            data:
-            {
-                from: CREATOR,
-                to: "mitch",
-                asset_ids: [1099511627776],
-                memo: "simpletext"
-            }
-        }]).then(r => console.log(r));
-}
-
-/** announce the auction */
-const announce = async () => {
-    await transact([
-        {
-            account: "atomicmarket",
-            name: "announceauct",
-            authorization: [{
-                actor: "atomicmarket",
-                permission: CREATOR_PERMISSION
-            }, {
-                actor: "mitch",
-                permission: CREATOR_PERMISSION,
-            }],
-            data:
-            {
-                seller: "mitch",
-                asset_ids: [1099511627776],
-                starting_bid: "1.0000 XPR",
-                duration: 3600,
-                maker_marketplace: MARKETPLACE_NAME
-            }
-        }]).then(r => console.log(r));
-}
-
-const cancel = async () => {
-    await transact([
-        {
-            account: "atomicmarket",
-            name: "cancelauct",
-            authorization: [{
-                actor: "atomicmarket",
-                permission: CREATOR_PERMISSION
-            }, {
-                actor: CREATOR,
-                permission: CREATOR_PERMISSION,
-            }],
-            data:
-            {
-                auction_id: 3
-            }
-        }]).then(r => console.log(r));
-}
-
-/**transfer nft to to atomicmarket contract to activate auction*/
-const transferToMarket = async () => {
-    await transact([
-        {
-            account: "atomicassets",
-            name: "transfer",
-            authorization: [
+            "authorization": [
                 {
-                    actor: CREATOR,
-                    permission: CREATOR_PERMISSION
-                },
-                {
-                    actor: "atomicmarket",
-                    permission: CREATOR_PERMISSION
-                },
-                {
-                    actor: "atomicassets",
-                    permission: CREATOR_PERMISSION
-                },
-                {
-                    actor: "mitch",
+                    actor: from,
                     permission: CREATOR_PERMISSION
                 }],
             data:
             {
-                from: "mitch",
-                to: "atomicmarket",
-                asset_ids: [1099511627776],
-                memo: "auction"
+                from: from,
+                to: to,
+                asset_ids: [id],
+                memo: memo
             }
-        }]).then(r => console.log(r));
+        }])
 }
 
+/** announce the auction */
+const announce = async (id) => {
+    console.log("----------------------------- Announcing auction for gold spot -----------------------------------")
+    await transact([
+        {
+            account: atomicmarket_contract,
+            name: "announceauct",
+            authorization: [{
+                actor: CREATOR,
+                permission: CREATOR_PERMISSION,
+            }],
+            data:
+            {
+                seller: CREATOR,
+                asset_ids: [id],
+                starting_bid: "1.0000 XPR",
+                duration: 3600,
+                maker_marketplace: MARKETPLACE_NAME
+            }
+        }])
+}
+
+/** cancel auction of given id */
+const cancel = async () => {
+    await transact([
+        {
+            account: atomicmarket_contract,
+            name: "cancelauct",
+            authorization: [{
+                actor: CREATOR,
+                permission: CREATOR_PERMISSION,
+            }],
+            data:
+            {
+                auction_id: 1
+            }
+        }])
+}
+
+/**transfer nft to to atomicmarket contract to activate auction*/
+const transferToMarket = async (id) => {
+    console.log("----------------------------- Transfer gold spot to atomicmarket -----------------------------------")
+    await transact([
+        {
+            account: atomicassets_contract,
+            name: "transfer",
+            authorization: [
+                {
+                    actor: CREATOR,
+                    permission: "owner"
+                }],
+            data:
+            {
+                from: CREATOR,
+                to: atomicmarket_contract,
+                asset_ids: [id],
+                memo: "auction"
+            }
+        }])
+}
+
+const get_atomicassets_table = async (scope, table) => {
+    return await rpc.get_table_rows({
+        json: true,               // Get the response as json
+        code: atomicassets_contract,      // Contract that we target
+        scope: scope,         // Account that owns the data
+        table: table,        // Table name
+        limit: 1000,                // Maximum number of rows that we want to get
+        reverse: false,           // Optional: Get reversed data
+        show_payer: false          // Optional: Show ram payer
+    }).then(r => r.rows)
+}
+
+
 const main = async () => {
-    // createSMCollection();
-    // await new Promise(r => setTimeout(r, 1500));
-    // createSMSchema();
-    // await new Promise(r => setTimeout(r, 1500));
-    // createSMTemplate();
-    // await new Promise(r => setTimeout(r, 1500));
-    // mintGold();
-    // await new Promise(r => setTimeout(r, 1500));
-    // create_market();
-    // await new Promise(r => setTimeout(r, 1500));
-    // add_xpr_to_marketconf();
-    // await new Promise(r => setTimeout(r, 1500));
-    cancel();
-    announce();
-    // await new Promise(r => setTimeout(r, 1500));
-    transferToMarket();
+    /** register market */
+    create_market();
+    await new Promise(r => setTimeout(r, 1500));
+    add_xpr_to_marketconf();
+
+    /** creating soon market spots */
+    createSMSCollection();
+    await new Promise(r => setTimeout(r, 1500));
+    createSMSSchema();
+    await new Promise(r => setTimeout(r, 1500));
+    createSMSTemplate("QmW85MY69oC1yWoLTivtGULySyNEAaC5kEaRtDZTuzN8YH", 1, "SOON SPOT - Gold", "This NFT is unique and has a special utility on soon.market - forever! Its owner has the power to promote an auction of choice in the main spotlight on the front page of the market by redeeming it - whenever they want! It is not burnable and as soon as the promoted auction ends this NFT will be auctioned again to find a new owner.");
+    await new Promise(r => setTimeout(r, 1500));
+    createSMSTemplate("QmXxaXdjzxC9YGgJQFoXUSXaiKfBknrK8UhQs3cQRyPskz", 0, "SOON SPOT - SILVER", "This NFT has a potentially unlimited edition size but we will make sure only a reasonable amount will be in circulation. It will be distributed in various ways: auctions, airdrops, competitions, … The owner can use it to promote an auction of choice in the slider on the bottom of the front page by redeeming it. On redemption the NFT will be burned.");
+    await new Promise(r => setTimeout(r, 1500));
+    const silverTemplate = (await get_atomicassets_table(SMS_COL, 'templates'))[1].template_id;
+    for (i = 0; i < 5; i++) {
+        await new Promise(r => setTimeout(r, 1000));
+        mint(silverTemplate, "silver", i, 5);
+    }
+    const goldTemplate = (await get_atomicassets_table(SMS_COL, 'templates'))[0].template_id;
+    mint(goldTemplate, "gold", 1, 1);
+    await new Promise(r => setTimeout(r, 1000));
+
+    assets = await get_atomicassets_table(CREATOR, 'assets');
+    assetId = assets[assets.length - 1].asset_id;
+
+    announce(assetId);
+    await new Promise(r => setTimeout(r, 1500));
+    transfer(assetId, CREATOR, atomicmarket_contract, "auction");
 }
 
 main()
