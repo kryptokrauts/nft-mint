@@ -5,7 +5,7 @@ const fetch = require('node-fetch')
 
 // Constants
 const ENDPOINT = process.env.ENDPOINT
-const CREATOR = 'powerofsoon'
+const CREATOR = 'mitch'
 const CREATOR_PERMISSION = 'active'
 const COLLECTION_NAME = 'monsterscoll' // COLLECTION_NAME must be 12 chars
 const SCHEMA_NAME = 'baseschema'
@@ -49,8 +49,8 @@ const transact = async (actions) => {
         console.log("Error executing transaction " + e);
         if (e.message.includes('fetching abi for atomicassets: Read past end of buffer')) {
             console.log("AtomicAssets contract not available, aborting")
-            process.exit(-1);
         }
+        process.exit(-1);
     }
 }
 
@@ -247,4 +247,4 @@ const main = () => {
     // get_atomicassets_tables();
 }
 
-main()
+main();

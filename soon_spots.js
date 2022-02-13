@@ -40,8 +40,8 @@ const transact = async (actions) => {
         console.log("Error executing transaction " + e);
         if (e.message.includes('fetching abi for atomicassets: Read past end of buffer')) {
             console.log("AtomicAssets contract not available, aborting")
-            process.exit(-1);
         }
+        process.exit(-1);
     }
 }
 
@@ -191,6 +191,9 @@ const transfer = async (id, from, to, memo) => {
                 {
                     actor: from,
                     permission: CREATOR_PERMISSION
+                }, {
+                    actor: to,
+                    permission: CREATOR_PERMISSION
                 }],
             data:
             {
@@ -203,40 +206,40 @@ const transfer = async (id, from, to, memo) => {
 }
 
 /** announce the auction */
-const announce = async (id) => {
-    console.log("----------------------------- Announcing auction for gold spot -----------------------------------")
-    await transact([
+const announce = async (id, owner) => {
+    console.log("----------------------------- Announcing auction -----------------------------------")
+    return await transact([
         {
             account: atomicmarket_contract,
             name: "announceauct",
             authorization: [{
-                actor: CREATOR,
+                actor: owner,
                 permission: CREATOR_PERMISSION,
             }],
             data:
             {
-                seller: CREATOR,
+                seller: owner,
                 asset_ids: [id],
                 starting_bid: "1.0000 XPR",
-                duration: 3600,
+                duration: 360000,
                 maker_marketplace: MARKETPLACE_NAME
             }
         }])
 }
 
 /** cancel auction of given id */
-const cancel = async () => {
+const cancel = async (id, owner) => {
     await transact([
         {
             account: atomicmarket_contract,
             name: "cancelauct",
             authorization: [{
-                actor: CREATOR,
+                actor: owner,
                 permission: CREATOR_PERMISSION,
             }],
             data:
             {
-                auction_id: 1
+                auction_id: id
             }
         }])
 }
@@ -275,6 +278,17 @@ const get_atomicassets_table = async (scope, table) => {
     }).then(r => r.rows)
 }
 
+const get_atomicmarket_table = async (scope, table) => {
+    return await rpc.get_table_rows({
+        json: true,               // Get the response as json
+        code: atomicmarket_contract,      // Contract that we target
+        scope: scope,         // Account that owns the data
+        table: table,        // Table name
+        limit: 1000,                // Maximum number of rows that we want to get
+        reverse: false,           // Optional: Get reversed data
+        show_payer: false          // Optional: Show ram payer
+    }).then(r => r.rows)
+}
 
 const main = async () => {
     /** register market */
@@ -298,14 +312,41 @@ const main = async () => {
     }
     const goldTemplate = (await get_atomicassets_table(SMS_COL, 'templates'))[0].template_id;
     mint(goldTemplate, "gold", 1, 1);
+
+    for (let index = 0; index < 5; index++) {
+        await new Promise(r => setTimeout(r, 1000));
+        /**announce and transfer first minted nft */
+        owner = "mitch"
+        assets = await get_atomicassets_table(owner, 'assets');
+        assetId = assets[0].asset_id;
+        ann = await announce(assetId, owner);
+        await new Promise(r => setTimeout(r, 1500));
+        transfer(assetId, owner, atomicmarket_contract, "auction");
+
+        /** send silver spot to mitch and then back to power of soon */
+        assets = await get_atomicassets_table(CREATOR, 'assets');
+        silverSpotId = assets[0].asset_id;
+        transfer(silverSpotId, CREATOR, owner);
+        auctions = await get_atomicmarket_table('atomicmarket', 'auctions')
+        auctionId = auctions[auctions.length - 1].auction_id;
+        transfer(silverSpotId, owner, CREATOR, '{"auction_id":' + auctionId + '}');
+    }
+
     await new Promise(r => setTimeout(r, 1000));
-
-    assets = await get_atomicassets_table(CREATOR, 'assets');
-    assetId = assets[assets.length - 1].asset_id;
-
-    announce(assetId);
+    /**announce auction with gold */
+    owner = "mitch"
+    assets = await get_atomicassets_table(owner, 'assets');
+    assetId = assets[0].asset_id;
+    ann = await announce(assetId, owner);
     await new Promise(r => setTimeout(r, 1500));
-    transfer(assetId, CREATOR, atomicmarket_contract, "auction");
-}
+    transfer(assetId, owner, atomicmarket_contract, "auction");
 
-main()
+    /** send gold spot to mitch and then back to power of soon */
+    assets = await get_atomicassets_table(CREATOR, 'assets');
+    goldSpotId = assets[assets.length - 1].asset_id;
+    transfer(goldSpotId, CREATOR, owner);
+    auctions = await get_atomicmarket_table('atomicmarket', 'auctions')
+    auctionId = auctions[auctions.length - 1].auction_id;
+    transfer(goldSpotId, owner, CREATOR, '{"auction_id":' + auctionId + '}');
+}
+main();
