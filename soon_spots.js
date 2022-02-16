@@ -37,7 +37,7 @@ const transact = async (actions) => {
             expireSeconds: 30
         })
     } catch (e) {
-        console.log("Error executing transaction " + e);
+        console.log("Error executing transaction: " + e);
         if (e.message.includes('fetching abi for atomicassets: Read past end of buffer')) {
             console.log("AtomicAssets contract not available, aborting")
         }
@@ -206,8 +206,12 @@ const transfer = async (id, from, to, memo) => {
 }
 
 /** announce the auction */
-const announce = async (id, owner) => {
+const announce = async (id, owner, time) => {
     console.log("----------------------------- Announcing auction -----------------------------------")
+    if (!time) {
+        time = 360000
+    }
+    console.log("Auction time " + time);
     return await transact([
         {
             account: atomicmarket_contract,
@@ -221,7 +225,7 @@ const announce = async (id, owner) => {
                 seller: owner,
                 asset_ids: [id],
                 starting_bid: "1.0000 XPR",
-                duration: 360000,
+                duration: time,
                 maker_marketplace: MARKETPLACE_NAME
             }
         }])
@@ -329,7 +333,7 @@ const main = async () => {
         transfer(silverSpotId, CREATOR, owner);
         auctions = await get_atomicmarket_table('atomicmarket', 'auctions')
         auctionId = auctions[auctions.length - 1].auction_id;
-        transfer(silverSpotId, owner, CREATOR, '{"auction_id":' + auctionId + '}');
+        transfer(silverSpotId, owner, CREATOR, 'auction ' + auctionId);
     }
 
     await new Promise(r => setTimeout(r, 1000));
@@ -347,6 +351,23 @@ const main = async () => {
     transfer(goldSpotId, CREATOR, owner);
     auctions = await get_atomicmarket_table('atomicmarket', 'auctions')
     auctionId = auctions[auctions.length - 1].auction_id;
-    transfer(goldSpotId, owner, CREATOR, '{"auction_id":' + auctionId + '}');
+    transfer(goldSpotId, owner, CREATOR, 'auction ' + auctionId);
 }
 main();
+
+// helper method to mint another nft including transfer of SILVER SPOT
+const mint_one = async (time) => {
+    owner = "mitch"
+    assets = await get_atomicassets_table(owner, 'assets');
+    assetId = assets[0].asset_id;
+    ann = await announce(assetId, owner, time);
+    await new Promise(r => setTimeout(r, 1500));
+    transfer(assetId, owner, atomicmarket_contract, "auction");
+
+    assets = await get_atomicassets_table(CREATOR, 'assets');
+    silverSpotId = assets[0].asset_id;
+    transfer(silverSpotId, CREATOR, owner);
+    auctions = await get_atomicmarket_table('atomicmarket', 'auctions')
+    auctionId = auctions[auctions.length - 1].auction_id;
+    transfer(silverSpotId, owner, CREATOR, 'auction ' + auctionId);
+}
