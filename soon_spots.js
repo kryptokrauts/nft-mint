@@ -32,10 +32,12 @@ const api = new Api({
 
 const transact = async (actions) => {
     try {
-        return await api.transact({ actions }, {
+        const result = await api.transact({ actions }, {
             useLastIrreversible: true,
             expireSeconds: 30
-        })
+        });
+        await new Promise(r => setTimeout(r, 1100));
+        return result;
     } catch (e) {
         console.log("Error executing transaction: " + e);
         if (e.message.includes('fetching abi for atomicassets: Read past end of buffer')) {
@@ -158,7 +160,7 @@ const create_market = async () => {
                 creator: CREATOR,
                 marketplace_name: MARKETPLACE_NAME
             }
-        }])
+        }]);
 }
 
 /** Register XPR token for atomicmarket */
@@ -190,9 +192,6 @@ const transfer = async (id, from, to, memo) => {
             "authorization": [
                 {
                     actor: from,
-                    permission: CREATOR_PERMISSION
-                }, {
-                    actor: to,
                     permission: CREATOR_PERMISSION
                 }],
             data:
@@ -240,6 +239,9 @@ const cancel = async (id, owner) => {
             authorization: [{
                 actor: owner,
                 permission: CREATOR_PERMISSION,
+            }, {
+                actor: atomicassets_contract,
+                permission: CREATOR_PERMISSION
             }],
             data:
             {
@@ -294,66 +296,114 @@ const get_atomicmarket_table = async (scope, table) => {
     }).then(r => r.rows)
 }
 
-const main = async () => {
-    /** register market */
-    create_market();
-    await new Promise(r => setTimeout(r, 1500));
-    add_xpr_to_marketconf();
+const registerMarket = async () => {
+    await create_market();
+    await add_xpr_to_marketconf();
+}
 
-    /** creating soon market spots */
-    createSMSCollection();
-    await new Promise(r => setTimeout(r, 1500));
-    createSMSSchema();
-    await new Promise(r => setTimeout(r, 1500));
-    createSMSTemplate("QmW85MY69oC1yWoLTivtGULySyNEAaC5kEaRtDZTuzN8YH", 1, "SOON SPOT - Gold", "This NFT is unique and has a special utility on soon.market - forever! Its owner has the power to promote an auction of choice in the main spotlight on the front page of the market by redeeming it - whenever they want! It is not burnable and as soon as the promoted auction ends this NFT will be auctioned again to find a new owner.");
-    await new Promise(r => setTimeout(r, 1500));
-    createSMSTemplate("QmXxaXdjzxC9YGgJQFoXUSXaiKfBknrK8UhQs3cQRyPskz", 0, "SOON SPOT - SILVER", "This NFT has a potentially unlimited edition size but we will make sure only a reasonable amount will be in circulation. It will be distributed in various ways: auctions, airdrops, competitions, … The owner can use it to promote an auction of choice in the slider on the bottom of the front page by redeeming it. On redemption the NFT will be burned.");
-    await new Promise(r => setTimeout(r, 1500));
-    const silverTemplate = (await get_atomicassets_table(SMS_COL, 'templates'))[1].template_id;
-    for (i = 0; i < 5; i++) {
-        await new Promise(r => setTimeout(r, 1000));
-        mint(silverTemplate, "silver", i, 5);
-    }
+const createStructs = async () => {
+    await createSMSCollection();
+    await createSMSSchema();
+    await createSMSTemplate("QmW85MY69oC1yWoLTivtGULySyNEAaC5kEaRtDZTuzN8YH", 1, "SOON SPOT - Gold", "This NFT is unique and has a special utility on soon.market - forever! Its owner has the power to promote an auction of choice in the main spotlight on the front page of the market by redeeming it - whenever they want! It is not burnable and as soon as the promoted auction ends this NFT will be auctioned again to find a new owner.");
+    await createSMSTemplate("QmXxaXdjzxC9YGgJQFoXUSXaiKfBknrK8UhQs3cQRyPskz", 0, "SOON SPOT - SILVER", "This NFT has a potentially unlimited edition size but we will make sure only a reasonable amount will be in circulation. It will be distributed in various ways: auctions, airdrops, competitions, … The owner can use it to promote an auction of choice in the slider on the bottom of the front page by redeeming it. On redemption the NFT will be burned.");
+}
+
+const mintGold = async () => {
     const goldTemplate = (await get_atomicassets_table(SMS_COL, 'templates'))[0].template_id;
-    mint(goldTemplate, "gold", 1, 1);
+    await mint(goldTemplate, "gold", 1, 1);
+}
 
+const mintSilver = async (num) => {
+    const silverTemplate = (await get_atomicassets_table(SMS_COL, 'templates'))[1].template_id;
+    for (i = 1; i <= num; i++) {
+        await mint(silverTemplate, "silver", i, num);
+    }
+}
+
+const createPromotedAuction = async (num, nftOwner, isGold) => {
     for (let index = 0; index < 5; index++) {
-        await new Promise(r => setTimeout(r, 1000));
         /**announce and transfer first minted nft */
-        owner = "mitch"
-        assets = await get_atomicassets_table(owner, 'assets');
-        assetId = assets[0].asset_id;
-        ann = await announce(assetId, owner);
-        await new Promise(r => setTimeout(r, 1500));
-        transfer(assetId, owner, atomicmarket_contract, "auction");
+        assets = await get_atomicassets_table(nftOwner, 'assets');
+        assetId = assets[assets.length - 1].asset_id;
+        ann = await announce(assetId, nftOwner);
+        // transfer to atomicmarket
+        transfer(assetId, nftOwner, atomicmarket_contract, "auction");
 
-        /** send silver spot to mitch and then back to power of soon */
+        /** send silver spot to nftOwner and then back to power of soon */
         assets = await get_atomicassets_table(CREATOR, 'assets');
-        silverSpotId = assets[0].asset_id;
-        transfer(silverSpotId, CREATOR, owner);
+        spotId = assets[assets.length - 1].asset_id;
+        if (isGold) {
+            spotId = assets[0].asset_id;
+        }
+        await transfer(silverSpotId, CREATOR, nftOwner);
         auctions = await get_atomicmarket_table('atomicmarket', 'auctions')
         auctionId = auctions[auctions.length - 1].auction_id;
-        transfer(silverSpotId, owner, CREATOR, 'auction ' + auctionId);
+        await transfer(spotId, nftOwner, CREATOR, 'auction ' + auctionId);
     }
-
-    await new Promise(r => setTimeout(r, 1000));
-    /**announce auction with gold */
-    owner = "mitch"
-    assets = await get_atomicassets_table(owner, 'assets');
-    assetId = assets[0].asset_id;
-    ann = await announce(assetId, owner);
-    await new Promise(r => setTimeout(r, 1500));
-    transfer(assetId, owner, atomicmarket_contract, "auction");
-
-    /** send gold spot to mitch and then back to power of soon */
-    assets = await get_atomicassets_table(CREATOR, 'assets');
-    goldSpotId = assets[assets.length - 1].asset_id;
-    transfer(goldSpotId, CREATOR, owner);
-    auctions = await get_atomicmarket_table('atomicmarket', 'auctions')
-    auctionId = auctions[auctions.length - 1].auction_id;
-    transfer(goldSpotId, owner, CREATOR, 'auction ' + auctionId);
 }
-main();
+
+const announceAuction = async (assetId, seller) => {
+    console.log(`${assetId}  ${seller}`)
+    await announce(assetId, seller);
+    transfer(assetId, seller, atomicmarket_contract, "auction");
+}
+
+const promoteAuction = async (spotId, auctionId, seller) => {
+    await transfer(spotId, seller, CREATOR, 'auction ' + auctionId);
+}
+
+const cancelAuct = async (auctionId, seller) => {
+    await cancel(auctionId, seller)
+}
+
+const transferSilverSpot = async () => {
+    assets = await get_atomicassets_table(CREATOR, 'assets');
+    spotId = assets[assets.length - 1].asset_id;
+    await transfer(spotId, CREATOR, "mitch");
+}
+
+const basicSetup = async () => {
+    await registerMarket();
+    await createStructs();
+    await mintGold();
+    await mintSilver(10);
+    for (let index = 0; index < 10; index++) {
+        await transferSilverSpot()
+    }
+}
+
+if (process.argv.includes('registerMarket')) {
+    registerMarket();
+}
+else if (process.argv.includes('createStructs')) {
+    createStructs();
+}
+else if (process.argv.includes('mintGold')) {
+    mintGold();
+}
+else if (process.argv.includes('mintSilver')) {
+    mintSilver(5);
+}
+else if (process.argv.includes('transferSpot')) {
+    transferSilverSpot();
+}
+else if (process.argv.includes('createSilverPA')) {
+    createPromotedAuction(1, "mitch", false);
+}
+else if (process.argv.includes('announce')) {
+    announceAuction(process.argv[3], process.argv[4]);
+}
+else if (process.argv.includes('promote')) {
+    promoteAuction(process.argv[3], process.argv[4], process.argv[5]);
+}
+else if (process.argv.includes('cancelAuct')) {
+    cancelAuct(process.argv[3], process.argv[4]);
+}
+else {
+    basicSetup();
+}
+
+
 
 // helper method to mint another nft including transfer of SILVER SPOT
 const mint_one = async (time) => {
@@ -361,7 +411,7 @@ const mint_one = async (time) => {
     assets = await get_atomicassets_table(owner, 'assets');
     assetId = assets[0].asset_id;
     ann = await announce(assetId, owner, time);
-    await new Promise(r => setTimeout(r, 1500));
+
     transfer(assetId, owner, atomicmarket_contract, "auction");
 
     assets = await get_atomicassets_table(CREATOR, 'assets');
