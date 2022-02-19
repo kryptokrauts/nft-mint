@@ -399,11 +399,25 @@ else if (process.argv.includes('promote')) {
 else if (process.argv.includes('cancelAuct')) {
     cancelAuct(process.argv[3], process.argv[4]);
 }
-else {
+else if (process.argv.includes('all')) {
     basicSetup();
 }
 
-
+else {
+    console.log(`
+        ------------- usage --------------
+        node soon_spot.js <cmd, one of>
+        all - basic setup
+        registerMarket - register soon.market
+        createStructs - necessary objects for soon spots
+        mintGold - mint the Gold Spot
+        mintSilver - mint 5 Silver Spots
+        transferSpot - transfer one spot to account mitch
+        promote <asset_id> <nftOwner> - announce an auction, 
+        promote <asset_id> <auctionId> <nftOwner> - promote an auction, 
+        cancel <auctionId> <nftOwner> - cancel on auction,        
+    `)
+}
 
 // helper method to mint another nft including transfer of SILVER SPOT
 const mint_one = async (time) => {
