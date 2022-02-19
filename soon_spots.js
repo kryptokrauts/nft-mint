@@ -310,12 +310,48 @@ const main = async () => {
     createSMSTemplate("QmXxaXdjzxC9YGgJQFoXUSXaiKfBknrK8UhQs3cQRyPskz", 0, "SOON SPOT - SILVER", "This NFT has a potentially unlimited edition size but we will make sure only a reasonable amount will be in circulation. It will be distributed in various ways: auctions, airdrops, competitions, … The owner can use it to promote an auction of choice in the slider on the bottom of the front page by redeeming it. On redemption the NFT will be burned.");
     await new Promise(r => setTimeout(r, 1500));
     const silverTemplate = (await get_atomicassets_table(SMS_COL, 'templates'))[1].template_id;
-    for (i = 0; i < 5; i++) {
+    for (i = 0; i < 10; i++) {
         await new Promise(r => setTimeout(r, 1000));
-        mint(silverTemplate, "silver", i, 5);
+        mint(silverTemplate, "silver", i, 10);
     }
     const goldTemplate = (await get_atomicassets_table(SMS_COL, 'templates'))[0].template_id;
-    mint(goldTemplate, "gold", 1, 1);
+    await mint(goldTemplate, "gold", 1, 1);
+
+    send_spots();
+}
+
+const send_spots = async () => {
+    /** send token to mitch account */
+    console.log("Sending all spots to account mitch");
+    silverSpots = await get_atomicassets_table(CREATOR, 'assets');
+    silverSpots.forEach(silverSpotId => {
+        // await new Promise(r => setTimeout(r, 1000));
+        transfer(silverSpotId.asset_id, CREATOR, "mitch");
+    });
+}
+
+main()
+
+// helper method to mint another nft including transfer of SILVER SPOT
+const mint_one = async (time) => {
+    owner = "mitch"
+    assets = await get_atomicassets_table(owner, 'assets');
+    assetId = assets[0].asset_id;
+    ann = await announce(assetId, owner, time);
+    await new Promise(r => setTimeout(r, 1500));
+    transfer(assetId, owner, atomicmarket_contract, "auction");
+
+    assets = await get_atomicassets_table(CREATOR, 'assets');
+    silverSpotId = assets[0].asset_id;
+    transfer(silverSpotId, CREATOR, owner);
+    auctions = await get_atomicmarket_table('atomicmarket', 'auctions')
+    auctionId = auctions[auctions.length - 1].auction_id;
+    transfer(silverSpotId, owner, CREATOR, 'auction ' + auctionId);
+}
+
+// mint_one(120);
+
+const mint_all = async () => {
 
     for (let index = 0; index < 5; index++) {
         await new Promise(r => setTimeout(r, 1000));
@@ -352,22 +388,4 @@ const main = async () => {
     auctions = await get_atomicmarket_table('atomicmarket', 'auctions')
     auctionId = auctions[auctions.length - 1].auction_id;
     transfer(goldSpotId, owner, CREATOR, 'auction ' + auctionId);
-}
-main();
-
-// helper method to mint another nft including transfer of SILVER SPOT
-const mint_one = async (time) => {
-    owner = "mitch"
-    assets = await get_atomicassets_table(owner, 'assets');
-    assetId = assets[0].asset_id;
-    ann = await announce(assetId, owner, time);
-    await new Promise(r => setTimeout(r, 1500));
-    transfer(assetId, owner, atomicmarket_contract, "auction");
-
-    assets = await get_atomicassets_table(CREATOR, 'assets');
-    silverSpotId = assets[0].asset_id;
-    transfer(silverSpotId, CREATOR, owner);
-    auctions = await get_atomicmarket_table('atomicmarket', 'auctions')
-    auctionId = auctions[auctions.length - 1].auction_id;
-    transfer(silverSpotId, owner, CREATOR, 'auction ' + auctionId);
 }
