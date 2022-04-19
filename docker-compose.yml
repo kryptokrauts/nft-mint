@@ -7,6 +7,7 @@ services:
     restart: on-failure
     ports:
       - "8888:8888"
+      - "8080:8080"
     networks:
       - proton-local
   init_atomic_contracts:
@@ -20,7 +21,7 @@ services:
   mint_spots:
     container_name: mint_spots
     build: .
-    command: node soon_spots.js
+    command: node soon_spots.js all
     depends_on:
       - proton-local
     networks:
